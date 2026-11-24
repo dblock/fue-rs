@@ -1,0 +1,42 @@
+name: Package
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set Up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Build Crate
+        run: cargo package --locked
+      - name: Install Crate in a Clean Location
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          consumer="$RUNNER_TEMP/consumer"
+          mkdir -p "$consumer"
+          tar -xzf "target/package/fue-$version.crate" -C "$consumer"
+          cargo install --locked --path "$consumer/fue-$version" --root "$consumer/install"
+          "$consumer/install/bin/fue" --version | grep -qx "fue $version"
+          "$consumer/install/bin/fue" --help

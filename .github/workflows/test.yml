@@ -1,0 +1,68 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test (Rust ${{ matrix.entry.rust }}, ${{ matrix.entry.os }})
+    runs-on: ${{ matrix.entry.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        entry:
+          - { rust: '1.85', os: ubuntu-latest }
+          - { rust: '1.100.0', os: ubuntu-latest }
+          - { rust: '1.100.0', os: macos-latest }
+          - { rust: '1.100.0', os: windows-latest }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set Up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.entry.rust }}
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: rust-${{ matrix.entry.rust }}
+      - name: Run Tests
+        run: cargo +${{ matrix.entry.rust }} test --locked
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set Up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0
+          components: llvm-tools-preview
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - name: Measure Coverage
+        run: cargo llvm-cov --locked --lcov --output-path lcov.info
+      - name: Report Coverage
+        uses: coverallsapp/github-action@v2
+        with:
+          file: lcov.info

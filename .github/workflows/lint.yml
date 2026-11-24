@@ -1,0 +1,80 @@
+name: Lint
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set Up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0
+          components: clippy, rustfmt
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Check Formatting
+        run: cargo fmt --all -- --check
+      - name: Run Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  markdown:
+    name: Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Run rumdl
+        uses: rvben/rumdl@v0.3.5
+        with:
+          version: 0.3.5
+
+  spelling:
+    name: Spelling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set Up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: dylint
+      - name: Cache Dylint Toolchains and Libraries
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.dylint_drivers
+            ~/.rustup/toolchains/nightly-*
+            target/dylint/libraries
+          key: dylint-${{ runner.os }}-${{ hashFiles('Cargo.toml', 'dylint.toml') }}
+      - name: Install Dylint
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-dylint@6.4.0,dylint-link@6.4.0
+      - name: Check Spelling
+        env:
+          RUSTFLAGS: -D warnings
+        run: cargo dylint --all -- --all-targets
