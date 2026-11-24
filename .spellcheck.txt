@@ -12,6 +12,7 @@ OpenSSL
 PRs
 README
 SHA
+SVG
 checksums
 commit's
 dblock

@@ -31,3 +31,7 @@ wiremock = "0.6.5"
 libraries = [
     { git = "https://github.com/dblock/dylint-spellcheck", tag = "v0.1.0" },
 ]
+
+[[example]]
+name = "logo"
+test = true
