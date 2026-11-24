@@ -1,0 +1,25 @@
+[package]
+name = "fue"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Daniel Doubrovkine and contributors"]
+description = "Find e-mail addresses of GitHub users and repository contributors."
+license = "MIT"
+repository = "https://github.com/dblock/fue-rs"
+readme = "README.md"
+keywords = ["github", "email", "cli"]
+categories = ["command-line-utilities"]
+include = ["src/**/*", "tests/**/*", "README.md", "CHANGELOG.md", "LICENSE"]
+
+[dependencies]
+clap = { version = "4.6.9", features = ["derive"] }
+
+[dev-dependencies]
+assert_cmd = "2.2.2"
+predicates = "3.1.4"
+
+[workspace.metadata.dylint]
+libraries = [
+    { git = "https://github.com/dblock/dylint-spellcheck", tag = "v0.1.0" },
+]

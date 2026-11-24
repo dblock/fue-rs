@@ -1,1 +1,5 @@
 /target
+/lcov.info
+/.spellcheck.tmp
+/.spellcheck.tmp.lock
+/.rumdl_cache
