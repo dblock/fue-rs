@@ -12,7 +12,7 @@ fue, short for Find Unicorn Engineers, finds the e-mail addresses of a GitHub us
 brew install dblock/tap/fue
 ```
 
-Or download a binary for macOS, Linux, or Windows from [Releases](https://github.com/dblock/fue-rs/releases), or run `cargo install fue`. fue has not been released yet; until it is, run `cargo install --git https://github.com/dblock/fue-rs`.
+Or download a binary for macOS, Linux, or Windows from [Releases](https://github.com/dblock/fue-rs/releases), or run `cargo install fue`.
 
 ## Usage
 
