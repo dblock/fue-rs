@@ -48,10 +48,13 @@ pub enum Author {
 pub enum SignOffs {
     /// Sign-offs by the same person; others are listed separately.
     #[default]
+    #[value(help = "Sign-offs by the same person; others are listed separately.")]
     Own,
     /// Every sign-off on the person's commits.
+    #[value(help = "Every sign-off on the person's commits.")]
     All,
     /// No sign-offs.
+    #[value(help = "No sign-offs.")]
     None,
 }
 

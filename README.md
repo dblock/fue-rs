@@ -4,67 +4,47 @@
 
 [![Test](https://github.com/dblock/fue-rs/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/dblock/fue-rs/actions/workflows/test.yml) [![Lint](https://github.com/dblock/fue-rs/actions/workflows/lint.yml/badge.svg?branch=master)](https://github.com/dblock/fue-rs/actions/workflows/lint.yml) [![Package](https://github.com/dblock/fue-rs/actions/workflows/package.yml/badge.svg?branch=master)](https://github.com/dblock/fue-rs/actions/workflows/package.yml) [![Coverage Status](https://coveralls.io/repos/github/dblock/fue-rs/badge.svg?branch=master)](https://coveralls.io/github/dblock/fue-rs?branch=master)
 
-Find e-mail addresses of GitHub users and repository contributors. A Rust rewrite of the [fue](https://github.com/dblock/fue) Ruby gem, built to ship as a single binary for macOS, Linux, and Windows.
+fue, short for Find Unicorn Engineers, finds the e-mail addresses of a GitHub user, or of a repository's contributors, from their public commits. It's a Rust port of the [fue](https://github.com/dblock/fue) Ruby tool, introduced in [Finding a GitHub User's E-Mail Address](https://code.dblock.org/2018/08/15/finding-a-github-users-email-address.html).
 
 ## Installation
-
-fue has not been released yet. From the first release, install it with [Homebrew](https://brew.sh/) on macOS or Linux:
 
 ```sh
 brew install dblock/tap/fue
 ```
 
-Or download a `fue` binary for macOS, Linux, or Windows from [Releases](https://github.com/dblock/fue-rs/releases), or install it from [crates.io](https://crates.io/crates/fue) with `cargo install fue`. Until then, build it from source with [Rust](https://rustup.rs/):
-
-```sh
-cargo install --git https://github.com/dblock/fue-rs
-```
+Or download a binary for macOS, Linux, or Windows from [Releases](https://github.com/dblock/fue-rs/releases), or run `cargo install fue`. fue has not been released yet; until it is, run `cargo install --git https://github.com/dblock/fue-rs`.
 
 ## Usage
 
-Log in with the [GitHub CLI](https://cli.github.com/) once with `gh auth login`, or set `GH_TOKEN`. Then search one or more users:
+Log in once with the [GitHub CLI](https://cli.github.com/), then pass a user or a repository:
 
 ```sh
+gh auth login
 fue octocat
-```
-
-```text
-@octocat
-  octocat@example.com                 The Octocat  12 commits, last 2026-11-20
-  work@example.com                    Octo Worker  1 commit, last 2025-05-01
-  1+octocat@users.noreply.github.com  octocat      3 commits, last 2024-01-10  noreply
-```
-
-fue shows every address it finds, real addresses first and most recently used first. `noreply` addresses do not receive e-mail.
-
-Search a repository's contributors, most commits first, including commit authors without a GitHub account:
-
-```sh
 fue octocat/hello-world
 ```
 
 ```text
 @octocat
-  octocat@example.com  The Octocat  12 commits, last 2026-11-20
-
-Anon Person (no GitHub account)
-  anon@example.com  Anon Person  3 commits, last 2025-05-01
+  octocat@example.com                 The Octocat  12 commits, last 2026-11-20
+  1+octocat@users.noreply.github.com  octocat      3 commits, last 2024-01-10  noreply
 ```
+
+Real addresses come first, most recently used first. `noreply` addresses don't receive e-mail.
 
 ## Configuration
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--depth COMMITS` | `1` for a user, `100` for a repository | Commits to look through in each repository for a user, or for each contributor of a repository. |
-| `--breadth REPOSITORIES` | `10` | Repositories to look through for a user, most recently pushed first. |
-| `--limit CONTRIBUTORS` | `10` | Contributors to show for a repository, most commits first. |
-| `--sign-offs own\|all\|none` | `own` | `Signed-off-by:` addresses to count as a person's: their own, every one, or none. With `own`, others' sign-offs, such as reviewers', are listed separately with `--verbose` and in JSON. |
-| `--json` | | Print JSON. |
-| `-v`, `--verbose` | | Show every name, the sources of each address, and where the token came from. |
-| `--token TOKEN` | `GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token` | GitHub token. |
-| `--api-url URL` | `https://api.github.com` | GitHub API, such as `https://ghe.example.com/api/v3` for GitHub Enterprise Server. |
+Most searches need no options. Run `fue --help` for all of them. The most useful are:
 
-fue reads public data only. See [DESIGN](DESIGN.md) for the sources it searches.
+| Option | Description |
+| --- | --- |
+| `--depth COMMITS` | Read more commits in each repository (default 1 for a user, 100 for each contributor). |
+| `--breadth REPOSITORIES` | Read more of a user's repositories (default 10). |
+| `--limit CONTRIBUTORS` | Show more of a repository's contributors (default 10). |
+| `-v`, `--verbose` | Also show every name, where each address was found, and others' `Signed-off-by:` addresses. |
+| `--json` | Print JSON. |
+
+fue uses a token from `GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token`. Pass `--token` to use another one, and `--api-url` for GitHub Enterprise Server.
 
 ## Contributing
 

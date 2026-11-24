@@ -4,7 +4,7 @@ fue is the work of [many contributors](https://github.com/dblock/fue-rs/graphs/c
 
 ## Setup and Validation
 
-Install [rustup](https://rustup.rs/). The pinned toolchain in `rust-toolchain.toml` is installed automatically; fue also builds with Rust 1.85, the `rust-version` in `Cargo.toml`, which CI checks with `cargo +1.85 build --locked`; tests need the pinned toolchain. Install the lint tools once:
+Install [rustup](https://rustup.rs/); the toolchain pinned in `rust-toolchain.toml` installs automatically. fue must also build with Rust 1.85, its `rust-version`, which CI checks with `cargo +1.85 build --locked`. Install the lint tools once:
 
 ```sh
 cargo install rumdl --locked
@@ -23,7 +23,7 @@ RUSTFLAGS="-D warnings" cargo dylint --all -- --all-targets
 cargo package --locked
 ```
 
-`rumdl` lints Markdown, including Title Case headings. Dylint runs [dylint-spellcheck](https://github.com/dblock/dylint-spellcheck) on Rust comments and the root Markdown documents, using the reviewed, case-sensitive vocabulary in `.spellcheck.txt`; fix misspellings and add only legitimate technical terms to the vocabulary. Check coverage with:
+`rumdl` lints Markdown, including Title Case headings. Dylint runs [dylint-spellcheck](https://github.com/dblock/dylint-spellcheck) on Rust comments and Markdown, with the case-sensitive vocabulary in `.spellcheck.txt`; fix misspellings, and add only legitimate technical terms. Check coverage with:
 
 ```sh
 cargo llvm-cov --locked --show-missing-lines
@@ -31,11 +31,11 @@ cargo llvm-cov --locked --show-missing-lines
 
 ## Tests
 
-Unit tests live next to the code in `src/`. CLI tests in `tests/cli.rs` run the real `fue` binary as a subprocess with [assert_cmd](https://crates.io/crates/assert_cmd) against a [wiremock](https://crates.io/crates/wiremock) mock of the GitHub REST and GraphQL APIs. Tests must not reach the network or need credentials: point fue at a local mock of the GitHub API with `--api-url`, and use `example.com` addresses rather than real people's e-mail in fixtures. Mocks match GraphQL requests by operation name, such as `OwnedRepositories`. Add tests for new behavior, including errors and edge cases, and keep coverage of project code close to complete.
+Unit tests live next to the code in `src/`. CLI tests in `tests/cli.rs` run the `fue` binary with [assert_cmd](https://crates.io/crates/assert_cmd) against a [wiremock](https://crates.io/crates/wiremock) mock of the GitHub API, passed with `--api-url`, and match GraphQL requests by operation name, such as `OwnedRepositories`. Tests must not reach the network or need credentials, and fixtures use `example.com` addresses rather than real people's. Add tests for new behavior, including errors and edge cases, and keep coverage close to complete.
 
 ## Benchmarks
 
-[Criterion](https://crates.io/crates/criterion) benchmarks live in `benches/`. `benches/search.rs` runs user searches against a mock GitHub API that pages through 100 repositories of 100 commits with 50 ms of latency per request, and prints how many GraphQL requests each search makes. `benches/addresses.rs` measures merging, sorting, and formatting addresses and parsing commits. CI runs each benchmark once. Compare a change against `master` by saving a baseline before it and comparing after it:
+[Criterion](https://crates.io/crates/criterion) benchmarks live in `benches/`: `search.rs` runs user searches against a mock GitHub API with 100 repositories of 100 commits and 50 ms per request, printing the GraphQL requests each makes, and `addresses.rs` measures address and commit handling. CI runs each benchmark once. Compare a change against `master` with a saved baseline:
 
 ```sh
 cargo bench --benches -- --save-baseline master
@@ -44,7 +44,7 @@ cargo bench --benches -- --baseline master
 
 ## GraphQL
 
-GraphQL queries live in `graphql/*.graphql` and are compiled into typed Rust by `graphql_client` derives in `src/graphql.rs`, which check them against GitHub's schema in `graphql/github.graphql`. Each query file includes the fragments it uses. To use a new field, add it to a query and let the compiler show the generated types. Update the schema as described in [graphql/README.md](graphql/README.md) when GitHub adds fields fue needs.
+Queries live in `graphql/*.graphql`, each with the fragments it uses, and are compiled into typed Rust by `graphql_client` derives in `src/graphql.rs`, checked against GitHub's schema in `graphql/github.graphql`. To use a new field, add it to a query and let the compiler show the generated types. Update the schema as described in [graphql/README.md](graphql/README.md).
 
 ## Pull Requests
 

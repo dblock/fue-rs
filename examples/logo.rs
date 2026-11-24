@@ -1,4 +1,4 @@
-//! Generates `assets/logo.svg`, a unicorn whose eye is an `@`, a nod to fue's original name, Finding Unicorn Engineers.
+//! Generates `assets/logo.svg`, a unicorn whose eye is an `@`, a nod to fue's name, short for Find Unicorn Engineers.
 //!
 //! Run `cargo run --example logo` after changing it; `cargo test` checks that the committed logo matches.
 
