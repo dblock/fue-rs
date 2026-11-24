@@ -54,15 +54,18 @@ pub async fn search(github: &GitHub, login: &str, limits: Limits) -> Result<Pers
         history(github, &user, Connection::Owned, limits),
         history(github, &user, Connection::Contributed, limits),
     );
-    for (source, commits) in [
-        (Source::Activity, activity?),
-        (Source::History, owned?),
-        (Source::History, contributed?),
-    ] {
-        for commit in &commits {
-            commits::add_commit(&mut addresses, commit, source);
-        }
-    }
+    let (activity, owned, contributed) = (activity?, owned?, contributed?);
+    let all: Vec<(Source, &Commit)> = activity
+        .iter()
+        .map(|commit| (Source::Activity, commit))
+        .chain(
+            owned
+                .iter()
+                .chain(&contributed)
+                .map(|commit| (Source::History, commit)),
+        )
+        .collect();
+    commits::add_commits(&mut addresses, &all);
     Ok(Person {
         login: Some(user.login),
         name: user.name,
