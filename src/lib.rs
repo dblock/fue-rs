@@ -7,5 +7,6 @@ pub mod github;
 pub mod graphql;
 pub mod model;
 pub mod output;
+pub mod repository;
 pub mod target;
 pub mod user;

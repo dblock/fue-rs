@@ -43,6 +43,22 @@ impl GitHub {
 
     /// Gets a REST resource, returning `None` when it does not exist.
     pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<Option<T>> {
+        match self.send_get(path).await? {
+            Some(response) => Ok(Some(response.json().await?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Gets a REST list, returning `None` when it does not exist and an empty list for `204 No Content`.
+    pub async fn get_list<T: DeserializeOwned>(&self, path: &str) -> Result<Option<Vec<T>>> {
+        match self.send_get(path).await? {
+            Some(response) if response.status() == StatusCode::NO_CONTENT => Ok(Some(Vec::new())),
+            Some(response) => Ok(Some(response.json().await?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn send_get(&self, path: &str) -> Result<Option<reqwest::Response>> {
         let response = self
             .http
             .get(format!("{}{path}", self.api_url))
@@ -52,8 +68,7 @@ impl GitHub {
         if response.status() == StatusCode::NOT_FOUND {
             return Ok(None);
         }
-        let response = check(response, path).await?;
-        Ok(Some(response.json().await?))
+        Ok(Some(check(response, path).await?))
     }
 
     /// Runs a typed GraphQL query and returns its `data`. `NOT_FOUND` errors are tolerated when the response has data, leaving the missing objects `null`.

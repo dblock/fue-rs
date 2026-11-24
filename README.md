@@ -27,14 +27,29 @@ fue octocat
   1+octocat@users.noreply.github.com  octocat      3 commits, last 2024-01-10  noreply
 ```
 
-fue shows every address it finds, real addresses first and most recently used first. `noreply` addresses do not receive e-mail. Searching repositories, such as `fue octocat/hello-world`, is not supported yet.
+fue shows every address it finds, real addresses first and most recently used first. `noreply` addresses do not receive e-mail.
+
+Search a repository's contributors, most commits first, including commit authors without a GitHub account:
+
+```sh
+fue octocat/hello-world
+```
+
+```text
+@octocat
+  octocat@example.com  The Octocat  12 commits, last 2026-11-20
+
+Anon Person (no GitHub account)
+  anon@example.com  Anon Person  3 commits, last 2025-05-01
+```
 
 ## Configuration
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--depth COMMITS` | `1` | Commits by the user to look through in each repository. |
-| `--breadth REPOSITORIES` | `10` | Repositories to look through, most recently pushed first. |
+| `--depth COMMITS` | `1` for a user, `100` for a repository | Commits to look through in each repository for a user, or for each contributor of a repository. |
+| `--breadth REPOSITORIES` | `10` | Repositories to look through for a user, most recently pushed first. |
+| `--limit CONTRIBUTORS` | `10` | Contributors to show for a repository, most commits first. |
 | `--json` | | Print JSON. |
 | `-v`, `--verbose` | | Show every name, the sources of each address, and where the token came from. |
 | `--token TOKEN` | `GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token` | GitHub token. |

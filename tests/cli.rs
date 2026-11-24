@@ -3,7 +3,9 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 use serde_json::{Value, json};
-use wiremock::matchers::{body_partial_json, body_string_contains, header, method, path};
+use wiremock::matchers::{
+    body_partial_json, body_string_contains, header, method, path, query_param,
+};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // GraphQL operation names.
@@ -520,14 +522,188 @@ async fn prints_json() {
     );
 }
 
+/// Contributors of `octocat/hello`, from the contributors API.
+async fn mock_contributors(server: &MockServer, page: &str, contributors: Value) {
+    Mock::given(method("GET"))
+        .and(path("/repos/octocat/hello/contributors"))
+        .and(query_param("anon", "1"))
+        .and(query_param("page", page))
+        .respond_with(ResponseTemplate::new(200).set_body_json(contributors))
+        .mount(server)
+        .await;
+}
+
+/// The history of `octocat/hello` for one author, a GraphQL `CommitAuthor`.
+async fn mock_contributor_history(server: &MockServer, author: Value, commits: Vec<Value>) {
+    Mock::given(method("POST"))
+        .and(path("/graphql"))
+        .and(body_string_contains(MORE_HISTORY))
+        .and(body_partial_json(json!({ "variables": { "owner": "octocat", "name": "hello", "author": author, "cursor": null } })))
+        .respond_with(graphql(json!({ "repository": repository("octocat/hello", history(commits, None)) })))
+        .with_priority(1)
+        .mount(server)
+        .await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
-async fn does_not_search_repositories_yet() {
+async fn searches_repository_contributors() {
+    let server = MockServer::start().await;
+    mock_contributors(
+        &server,
+        "1",
+        json!([
+            { "type": "User", "login": "octocat", "node_id": "U_octocat", "contributions": 12 },
+            { "type": "Anonymous", "email": "anon@example.com", "name": "Anon Person", "contributions": 3 },
+            { "type": "Anonymous", "email": "lost@example.com", "name": "Lost Person", "contributions": 1 },
+            { "type": "Anonymous", "contributions": 1 }
+        ]),
+    )
+    .await;
+    mock_contributor_history(
+        &server,
+        json!({ "id": "U_octocat" }),
+        vec![
+            commit(
+                "c1",
+                "2026-11-20T10:00:00Z",
+                "The Octocat",
+                "octocat@example.com",
+                "Change.\n\nSigned-off-by: Mona <mona@example.com>",
+            ),
+            commit(
+                "c2",
+                "2024-01-10T00:00:00Z",
+                "octocat",
+                "1+octocat@users.noreply.github.com",
+                "Fix.",
+            ),
+        ],
+    )
+    .await;
+    mock_contributor_history(
+        &server,
+        json!({ "emails": ["anon@example.com"] }),
+        vec![commit(
+            "c3",
+            "2025-05-01T00:00:00Z",
+            "Anon Person",
+            "anon@example.com",
+            "Work.",
+        )],
+    )
+    .await;
+    mock_contributor_history(&server, json!({ "emails": ["lost@example.com"] }), vec![]).await;
+    fue(&server).arg("octocat/hello").assert().success().stdout(
+        "@octocat\n\
+         \x20 mona@example.com                    Mona         1 commit, last 2026-11-20\n\
+         \x20 octocat@example.com                 The Octocat  1 commit, last 2026-11-20\n\
+         \x20 1+octocat@users.noreply.github.com  octocat      1 commit, last 2024-01-10  noreply\n\
+         \n\
+         Anon Person (no GitHub account)\n\
+         \x20 anon@example.com  Anon Person  1 commit, last 2025-05-01\n\
+         \n\
+         Lost Person (no GitHub account)\n\
+         \x20 lost@example.com  Lost Person\n\
+         \n\
+         (unknown)\n\
+         \x20 (no e-mail found)\n",
+    );
+
+    let output = fue(&server)
+        .args(["--json", "octocat/hello"])
+        .output()
+        .unwrap();
+    let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value[0]["target"], "octocat/hello");
+    assert_eq!(value[0]["people"].as_array().unwrap().len(), 4);
+    assert_eq!(value[0]["people"][1]["login"], Value::Null);
+    assert_eq!(value[0]["people"][1]["name"], "Anon Person");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn looks_through_100_commits_per_contributor_by_default() {
+    let server = MockServer::start().await;
+    mock_contributors(
+        &server,
+        "1",
+        json!([{ "type": "User", "login": "octocat", "node_id": "U_octocat", "contributions": 1 }]),
+    )
+    .await;
+    for depth in [100, 5] {
+        Mock::given(method("POST"))
+            .and(path("/graphql"))
+            .and(body_string_contains(MORE_HISTORY))
+            .and(body_partial_json(
+                json!({ "variables": { "depth": depth } }),
+            ))
+            .respond_with(graphql(json!({ "repository": null })))
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+    fue(&server).arg("octocat/hello").assert().success();
+    fue(&server)
+        .args(["--depth", "5", "octocat/hello"])
+        .assert()
+        .success();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn limits_and_pages_through_contributors() {
+    let server = MockServer::start().await;
+    let users = |range: std::ops::Range<usize>| -> Value {
+        range
+            .map(|index| json!({ "type": "User", "login": format!("user{index}"), "node_id": format!("U_{index}"), "contributions": 1 }))
+            .collect()
+    };
+    mock_contributors(&server, "1", users(0..100)).await;
+    mock_contributors(&server, "2", users(100..103)).await;
+    Mock::given(method("POST"))
+        .and(path("/graphql"))
+        .and(body_string_contains(MORE_HISTORY))
+        .respond_with(graphql(json!({ "repository": null })))
+        .mount(&server)
+        .await;
+    let headings = |limit: &str| -> usize {
+        let output = fue(&server)
+            .args(["--limit", limit, "octocat/hello"])
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .lines()
+            .filter(|line| line.starts_with('@'))
+            .count()
+    };
+    assert_eq!(headings("2"), 2);
+    assert_eq!(headings("101"), 101);
+    assert_eq!(headings("500"), 103);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn shows_nobody_for_empty_repositories() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/repos/octocat/empty/contributors"))
+        .respond_with(ResponseTemplate::new(204))
+        .mount(&server)
+        .await;
+    fue(&server)
+        .arg("octocat/empty")
+        .assert()
+        .success()
+        .stdout("");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn reports_unknown_repositories() {
     let server = MockServer::start().await;
     fue(&server)
-        .arg("octocat/hello-world")
+        .arg("octocat/missing")
         .assert()
         .failure()
-        .stderr("error: octocat/hello-world: Searching repositories is not supported yet.\n");
+        .stderr("error: octocat/missing: GitHub repository `octocat/missing` not found.\n");
 }
 
 #[test]
@@ -577,7 +753,7 @@ fn prints_help() {
             "Find e-mail addresses of GitHub users and repository contributors.",
         ))
         .stdout(predicate::str::contains(
-            "Commits by the user to look through in each repository.",
+            "Contributors to show for a repository, most commits first.",
         ));
 }
 

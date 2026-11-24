@@ -31,7 +31,7 @@ For a user, fue merges four sources and records which ones found each address. A
 
 The profile is read first; activity and both history searches then run concurrently. A repository deleted since a push is skipped.
 
-For a repository, fue reads the addresses contributors used in that repository's own history, including commit authors without a GitHub account, and lists people by commit count. `--limit` caps the number of people for large projects.
+For a repository, fue lists contributors from `GET /repos/{owner}/{repo}/contributors?anon=1`, which orders them by commits and includes commit authors without a GitHub account by e-mail, and keeps the first `--limit` (default 10). For each contributor it reads up to `--depth` (default 100) of their commits in the repository's default branch, filtered by account or, without one, by e-mail, so each address is one they used in that repository. Up to eight contributors are searched at once, and they are shown in the order of the contributors list. An empty repository has no contributors.
 
 ## Authentication
 

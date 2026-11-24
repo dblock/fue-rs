@@ -2,7 +2,7 @@
 
 use std::process::ExitCode;
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use clap::Parser;
 use futures::future::join_all;
 
@@ -10,8 +10,9 @@ use crate::auth;
 use crate::github::{self, GitHub, error_message};
 use crate::model::Person;
 use crate::output::{self, Found};
+use crate::repository;
 use crate::target::Target;
-use crate::user::{self, Limits};
+use crate::user;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -45,20 +46,28 @@ pub struct Args {
     #[arg(
         long,
         value_name = "COMMITS",
-        default_value_t = 1,
         value_parser = clap::value_parser!(u32).range(1..),
-        help = "Commits by the user to look through in each repository."
+        help = "Commits to look through in each repository for a user (default 1), or for each contributor of a repository (default 100)."
     )]
-    pub depth: u32,
+    pub depth: Option<u32>,
 
     #[arg(
         long,
         value_name = "REPOSITORIES",
         default_value_t = 10,
         value_parser = clap::value_parser!(u32).range(1..),
-        help = "Repositories to look through, most recently pushed first."
+        help = "Repositories to look through for a user, most recently pushed first."
     )]
     pub breadth: u32,
+
+    #[arg(
+        long,
+        value_name = "CONTRIBUTORS",
+        default_value_t = 10,
+        value_parser = clap::value_parser!(u32).range(1..),
+        help = "Contributors to show for a repository, most commits first."
+    )]
+    pub limit: u32,
 
     #[arg(long, help = "Print JSON.")]
     pub json: bool,
@@ -78,14 +87,10 @@ pub async fn run(args: Args) -> Result<ExitCode> {
         eprintln!("Using a GitHub token from {}.", token.source);
     }
     let github = GitHub::new(&args.api_url, &token.value)?;
-    let limits = Limits {
-        depth: args.depth as usize,
-        breadth: args.breadth as usize,
-    };
     let results = join_all(
         args.targets
             .iter()
-            .map(|target| search(&github, target, limits)),
+            .map(|target| search(&github, target, &args)),
     )
     .await;
 
@@ -121,9 +126,22 @@ pub async fn run(args: Args) -> Result<ExitCode> {
     })
 }
 
-async fn search(github: &GitHub, target: &Target, limits: Limits) -> Result<Vec<Person>> {
+async fn search(github: &GitHub, target: &Target, args: &Args) -> Result<Vec<Person>> {
+    let depth = args.depth.map(|depth| depth as usize);
     match target {
-        Target::User(login) => Ok(vec![user::search(github, login, limits).await?]),
-        Target::Repository { .. } => bail!("Searching repositories is not supported yet."),
+        Target::User(login) => {
+            let limits = user::Limits {
+                depth: depth.unwrap_or(1),
+                breadth: args.breadth as usize,
+            };
+            Ok(vec![user::search(github, login, limits).await?])
+        }
+        Target::Repository { owner, name } => {
+            let limits = repository::Limits {
+                depth: depth.unwrap_or(100),
+                limit: args.limit as usize,
+            };
+            repository::search(github, owner, name, limits).await
+        }
     }
 }
