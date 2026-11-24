@@ -37,6 +37,8 @@ pub struct RepositoryPage {
 pub enum Author {
     /// A GitHub user, by GraphQL ID.
     Id(String),
+    /// A commit author without a GitHub account, by e-mail.
+    Email(String),
 }
 
 /// Adds a commit's author and `Signed-off-by:` addresses.
@@ -73,10 +75,15 @@ pub async fn repository_history(
     mut cursor: Option<String>,
     mut remaining: usize,
 ) -> Result<Vec<Commit>> {
-    let Author::Id(id) = author;
-    let author = repository_history::CommitAuthor {
-        id: Some(id.clone()),
-        emails: None,
+    let author = match author {
+        Author::Id(id) => repository_history::CommitAuthor {
+            id: Some(id.clone()),
+            emails: None,
+        },
+        Author::Email(email) => repository_history::CommitAuthor {
+            id: None,
+            emails: Some(vec![email.clone()]),
+        },
     };
     let mut commits = Vec::new();
     while remaining > 0 {

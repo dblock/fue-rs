@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::{Address, Person};
+use crate::model::{Address, Person, Source};
 
 /// The people found for one target, in `--json` output.
 #[derive(Debug, Serialize)]
@@ -73,8 +73,9 @@ fn row(address: &Address, verbose: bool) -> [String; 4] {
         address.names.first().cloned().unwrap_or_default()
     };
     let usage = match address.commits {
-        // Only a public profile address has no commits.
-        0 => "public profile".to_string(),
+        0 if address.sources.contains(&Source::Profile) => "public profile".to_string(),
+        // A contributor without a GitHub account whose commits were not found.
+        0 => String::new(),
         count => {
             let commits = if count == 1 { "commit" } else { "commits" };
             match &address.last_used {
@@ -101,7 +102,6 @@ fn row(address: &Address, verbose: bool) -> [String; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Source;
 
     fn address(
         email: &str,
