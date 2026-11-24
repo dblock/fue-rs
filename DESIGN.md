@@ -66,6 +66,8 @@ fue uses `--token`, then `GH_TOKEN` or `GITHUB_TOKEN`, then `gh auth token` for 
 
 The logo is a unicorn whose eye is an `@`, a nod to the name: fue is short for Find Unicorn Engineers. It is original artwork, generated as `assets/logo.svg` by `examples/logo.rs`, with the `@` drawn as strokes so it doesn't depend on fonts. Edit the example and run `cargo run --example logo`; `cargo test` fails while the committed SVG differs.
 
+The demo at the top of the README, `assets/demo.gif`, is recorded with [vhs](https://github.com/charmbracelet/vhs) from `assets/demo.tape`, which runs the release build in a real terminal so the spinner shows: run `cargo build --release && vhs assets/demo.tape`, and look at the result before committing it, since it shows live GitHub data.
+
 ## Distribution
 
 Releases publish the crate to crates.io with [rust-crate-release](https://github.com/dblock/rust-crate-release) and attach archives with SHA-256 checksums to the GitHub Release: macOS on Apple silicon and Intel, statically linked Linux on arm64 and x86_64, and Windows on x86_64. Every pull request builds the same binaries. A formula in [dblock/homebrew-tap](https://github.com/dblock/homebrew-tap) installs them. See [RELEASING](RELEASING.md).

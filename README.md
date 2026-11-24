@@ -6,6 +6,8 @@
 
 fue, short for Find Unicorn Engineers, finds the e-mail addresses of a GitHub user, or of a repository's contributors, from their public commits. It's a Rust port of the [fue](https://github.com/dblock/fue) Ruby tool, introduced in [Finding a GitHub User's E-Mail Address](https://code.dblock.org/2018/08/15/finding-a-github-users-email-address.html).
 
+![fue finding the e-mail address of the GitHub user defunkt, with a spinner while it searches.](assets/demo.gif)
+
 ## Installation
 
 ```sh
