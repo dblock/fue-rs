@@ -236,21 +236,21 @@ async fn merges_every_source() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn pages_through_repositories_and_commits() {
+async fn pages_through_repositories() {
     let server = MockServer::start().await;
     mock_user(&server, "octocat", json!({ "email": null })).await;
     Mock::given(method("POST"))
         .and(path("/graphql"))
         .and(body_string_contains(OWNED))
         .and(body_partial_json(
-            json!({ "variables": { "breadth": 100, "depth": 100, "cursor": null } }),
+            json!({ "variables": { "breadth": 100, "depth": 1, "cursor": null } }),
         ))
         .respond_with(graphql(repositories(
             vec![repository(
-                "octocat/big",
+                "octocat/first",
                 history(
                     vec![commit("c1", "2026-01-01", "Octo", "first@example.com", "")],
-                    Some("h1"),
+                    None,
                 ),
             )],
             Some("r1"),
@@ -266,13 +266,11 @@ async fn pages_through_repositories_and_commits() {
             json!({ "variables": { "breadth": 50, "cursor": "r1" } }),
         ))
         .respond_with(graphql(repositories(
-            vec![
-                json!({ "nameWithOwner": "octocat/tree", "defaultBranchRef": { "target": { "__typename": "Tree" } } }),
-                repository(
-                "octocat/small",
+            vec![repository(
+                "octocat/second",
                 history(
                     vec![commit("c2", "2025-01-01", "Octo", "second@example.com", "")],
-                    Some("h3"),
+                    None,
                 ),
             )],
             Some("r2"),
@@ -281,50 +279,84 @@ async fn pages_through_repositories_and_commits() {
         .expect(1)
         .mount(&server)
         .await;
+    fue(&server)
+        .args(["--breadth", "150", "octocat"])
+        .assert()
+        .success()
+        .stdout(
+            "@octocat\n\
+             \x20 first@example.com   Octo  1 commit, last 2026-01-01\n\
+             \x20 second@example.com  Octo  1 commit, last 2025-01-01\n",
+        );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn pages_through_commits() {
+    let server = MockServer::start().await;
+    mock_user(&server, "octocat", json!({ "email": null })).await;
     Mock::given(method("POST"))
         .and(path("/graphql"))
-        .and(body_string_contains(MORE_HISTORY))
-        .and(body_partial_json(json!({ "variables": { "owner": "octocat", "name": "big", "depth": 100, "cursor": "h1" } })))
-        .respond_with(graphql(json!({
+        .and(body_string_contains(OWNED))
+        .and(body_partial_json(json!({ "variables": { "breadth": 2, "depth": 100, "cursor": null } })))
+        .respond_with(graphql(repositories(
+            vec![
+                repository(
+                    "octocat/big",
+                    history(vec![commit("c1", "2026-01-01", "Octo", "first@example.com", "")], Some("h1")),
+                ),
+                json!({ "nameWithOwner": "octocat/tree", "defaultBranchRef": { "target": { "__typename": "Tree" } } }),
+                repository(
+                    "octocat/small",
+                    history(vec![commit("c2", "2025-01-01", "Octo", "second@example.com", "")], Some("h3")),
+                ),
+            ],
+            Some("r1"),
+        )))
+        .with_priority(1)
+        .expect(1)
+        .mount(&server)
+        .await;
+    let more = |name: &str, depth: usize, cursor: &str, response: ResponseTemplate| {
+        Mock::given(method("POST"))
+            .and(path("/graphql"))
+            .and(body_string_contains(MORE_HISTORY))
+            .and(body_partial_json(json!({ "variables": { "owner": "octocat", "name": name, "depth": depth, "cursor": cursor } })))
+            .respond_with(response)
+            .with_priority(1)
+            .expect(1)
+    };
+    more(
+        "big",
+        100,
+        "h1",
+        graphql(json!({
             "repository": repository(
                 "octocat/big",
                 history(vec![commit("c3", "2024-01-01", "Octo", "older@example.com", "")], Some("h2")),
             )
-        })))
-        .with_priority(1)
-        .expect(1)
-        .mount(&server)
-        .await;
-    Mock::given(method("POST"))
-        .and(path("/graphql"))
-        .and(body_string_contains(MORE_HISTORY))
-        .and(body_partial_json(
-            json!({ "variables": { "depth": 50, "cursor": "h2" } }),
-        ))
-        .respond_with(graphql(json!({
+        })),
+    )
+    .mount(&server)
+    .await;
+    more(
+        "big",
+        50,
+        "h2",
+        graphql(json!({
             "repository": repository(
                 "octocat/big",
                 history(vec![commit("c4", "2023-01-01", "Octo", "oldest@example.com", "")], None),
             )
-        })))
-        .with_priority(1)
-        .expect(1)
-        .mount(&server)
-        .await;
+        })),
+    )
+    .mount(&server)
+    .await;
     // The repository is deleted while paging.
-    Mock::given(method("POST"))
-        .and(path("/graphql"))
-        .and(body_string_contains(MORE_HISTORY))
-        .and(body_partial_json(
-            json!({ "variables": { "name": "small", "depth": 100, "cursor": "h3" } }),
-        ))
-        .respond_with(graphql(json!({ "repository": null })))
-        .with_priority(1)
-        .expect(1)
+    more("small", 100, "h3", graphql(json!({ "repository": null })))
         .mount(&server)
         .await;
     fue(&server)
-        .args(["--breadth", "150", "--depth", "250", "octocat"])
+        .args(["--breadth", "2", "--depth", "250", "octocat"])
         .assert()
         .success()
         .stdout(
@@ -334,6 +366,73 @@ async fn pages_through_repositories_and_commits() {
              \x20 older@example.com   Octo  1 commit, last 2024-01-01\n\
              \x20 oldest@example.com  Octo  1 commit, last 2023-01-01\n",
         );
+}
+
+/// Variables of the GraphQL requests named `operation` that the server received.
+async fn graphql_variables(server: &MockServer, operation: &str) -> Vec<Value> {
+    server
+        .received_requests()
+        .await
+        .unwrap()
+        .iter()
+        .filter_map(|request| serde_json::from_slice::<Value>(&request.body).ok())
+        .filter(|body| body["operationName"] == operation)
+        .map(|body| body["variables"].clone())
+        .collect()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn requests_fewer_repositories_when_looking_deeper() {
+    let server = MockServer::start().await;
+    mock_user(&server, "octocat", json!({ "email": null })).await;
+    fue(&server)
+        .args(["--breadth", "100", "--depth", "10", "octocat"])
+        .assert()
+        .success();
+    for operation in [OWNED, CONTRIBUTED] {
+        let variables = graphql_variables(&server, operation).await;
+        assert_eq!(variables.len(), 1, "{operation}");
+        assert_eq!(variables[0]["breadth"], 20, "{operation}");
+        assert_eq!(variables[0]["depth"], 10, "{operation}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn retries_graphql_timeouts_once() {
+    let server = MockServer::start().await;
+    mock_user(
+        &server,
+        "octocat",
+        json!({ "email": "octocat@example.com" }),
+    )
+    .await;
+    Mock::given(method("POST"))
+        .and(path("/graphql"))
+        .and(body_string_contains(OWNED))
+        .respond_with(ResponseTemplate::new(502))
+        .up_to_n_times(1)
+        .with_priority(1)
+        .mount(&server)
+        .await;
+    fue(&server)
+        .arg("octocat")
+        .assert()
+        .success()
+        .stdout("@octocat\n  octocat@example.com  public profile\n");
+    assert_eq!(graphql_variables(&server, OWNED).await.len(), 2);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn reports_repeated_graphql_timeouts() {
+    let server = MockServer::start().await;
+    mock_user(&server, "octocat", json!({ "email": null })).await;
+    mock_graphql(&server, OWNED, ResponseTemplate::new(502)).await;
+    fue(&server)
+        .arg("octocat")
+        .assert()
+        .failure()
+        .stderr("error: octocat: GitHub API returned 502 Bad Gateway for /graphql.\n");
+    assert_eq!(graphql_variables(&server, OWNED).await.len(), 2);
 }
 
 #[tokio::test(flavor = "multi_thread")]

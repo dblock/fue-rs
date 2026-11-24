@@ -28,6 +28,8 @@ pub struct Limits {
 const PUSHES: usize = 10;
 /// Commits by the user looked up from each recent push.
 const PUSH_DEPTH: i64 = 10;
+/// Commits requested at once. GitHub times out when filtering many more commits by author in one request.
+const COMMITS_PER_REQUEST: usize = 200;
 
 #[derive(Deserialize)]
 struct User {
@@ -171,14 +173,23 @@ async fn history(
     limits: Limits,
 ) -> Result<Vec<Commit>> {
     let author = Author::Id(user.node_id.clone());
-    let depth = limits.depth.min(PAGE) as i64;
+    let depth = limits.depth.min(PAGE);
+    // Fewer repositories per request when looking through more commits in each.
+    let repositories_per_request = (COMMITS_PER_REQUEST / depth).clamp(1, PAGE);
     let mut commits = Vec::new();
     let mut cursor: Option<String> = None;
     let mut remaining = limits.breadth;
     while remaining > 0 {
-        let breadth = remaining.min(PAGE);
-        let Some(page) =
-            repositories(github, user, connection, depth, breadth as i64, cursor).await?
+        let breadth = remaining.min(repositories_per_request);
+        let Some(page) = repositories(
+            github,
+            user,
+            connection,
+            depth as i64,
+            breadth as i64,
+            cursor,
+        )
+        .await?
         else {
             break;
         };

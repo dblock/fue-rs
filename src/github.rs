@@ -8,6 +8,9 @@ use serde::de::DeserializeOwned;
 
 pub const DEFAULT_API_URL: &str = "https://api.github.com";
 
+/// Attempts at a GraphQL query that fails with a 502, 503, or 504.
+const GRAPHQL_ATTEMPTS: usize = 2;
+
 pub struct GitHub {
     http: reqwest::Client,
     api_url: String,
@@ -73,13 +76,30 @@ impl GitHub {
 
     /// Runs a typed GraphQL query and returns its `data`. `NOT_FOUND` errors are tolerated when the response has data, leaving the missing objects `null`.
     pub async fn query<Q: GraphQLQuery>(&self, variables: Q::Variables) -> Result<Q::ResponseData> {
-        let response = self
-            .http
-            .post(&self.graphql_url)
-            .json(&Q::build_query(variables))
-            .send()
-            .await
-            .with_context(|| format!("Failed to reach the GitHub API at {}", self.graphql_url))?;
+        let body = Q::build_query(variables);
+        let mut attempts = 0;
+        let response = loop {
+            attempts += 1;
+            let response = self
+                .http
+                .post(&self.graphql_url)
+                .json(&body)
+                .send()
+                .await
+                .with_context(|| {
+                    format!("Failed to reach the GitHub API at {}", self.graphql_url)
+                })?;
+            // GitHub answers a query that times out with a 502, and may succeed when retried.
+            let transient = matches!(
+                response.status(),
+                StatusCode::BAD_GATEWAY
+                    | StatusCode::SERVICE_UNAVAILABLE
+                    | StatusCode::GATEWAY_TIMEOUT
+            );
+            if !(transient && attempts < GRAPHQL_ATTEMPTS) {
+                break response;
+            }
+        };
         let response: GraphQlResponse<Q::ResponseData> =
             check(response, "/graphql").await?.json().await?;
         let errors = response.errors.unwrap_or_default();
