@@ -99,6 +99,11 @@ impl AddressBook {
         }
     }
 
+    /// Whether the book has an address, compared case-insensitively.
+    pub fn contains(&self, email: &str) -> bool {
+        self.entries.contains_key(&email.trim().to_lowercase())
+    }
+
     /// Real addresses first, then most recently used, then most used.
     pub fn into_addresses(self) -> Vec<Address> {
         let mut addresses: Vec<Address> = self
@@ -170,6 +175,14 @@ mod tests {
             addresses[0].sources,
             vec![Source::Activity, Source::History]
         );
+    }
+
+    #[test]
+    fn finds_addresses_case_insensitively() {
+        let mut book = AddressBook::default();
+        book.add("DB@Example.com", None, Source::Profile, None);
+        assert!(book.contains(" db@example.com "));
+        assert!(!book.contains("other@example.com"));
     }
 
     #[test]

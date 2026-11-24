@@ -167,7 +167,7 @@ async fn merges_every_source() {
                             "2024-01-10T00:00:00Z",
                             "octocat",
                             "1+octocat@users.noreply.github.com",
-                            "Fix.\n\nSigned-off-by: Mona <mona@example.com>",
+                            "Fix.\n\nSigned-off-by: Mona <mona@example.com>\nSigned-off-by: The Octocat <octocat@real.example.com>",
                         ),
                     ],
                     None,
@@ -205,7 +205,7 @@ async fn merges_every_source() {
         "@octocat\n\
          \x20 octocat@example.com                 The Octocat  1 commit, last 2026-11-20\n\
          \x20 work@example.com                    Octo Worker  1 commit, last 2025-05-01\n\
-         \x20 mona@example.com                    Mona         1 commit, last 2024-01-10\n\
+         \x20 octocat@real.example.com            The Octocat  1 commit, last 2024-01-10\n\
          \x20 1+octocat@users.noreply.github.com  octocat      1 commit, last 2024-01-10  noreply\n",
     );
 
@@ -694,7 +694,6 @@ async fn searches_repository_contributors() {
     mock_contributor_history(&server, json!({ "emails": ["lost@example.com"] }), vec![]).await;
     fue(&server).arg("octocat/hello").assert().success().stdout(
         "@octocat\n\
-         \x20 mona@example.com                    Mona         1 commit, last 2026-11-20\n\
          \x20 octocat@example.com                 The Octocat  1 commit, last 2026-11-20\n\
          \x20 1+octocat@users.noreply.github.com  octocat      1 commit, last 2024-01-10  noreply\n\
          \n\

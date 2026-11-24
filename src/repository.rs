@@ -88,10 +88,13 @@ async fn person(
         (None, None) => None,
     };
     if let Some(author) = author {
-        for commit in commits::repository_history(github, owner, name, &author, None, depth).await?
-        {
-            commits::add_commit(&mut addresses, &commit, Source::History);
-        }
+        let history =
+            commits::repository_history(github, owner, name, &author, None, depth).await?;
+        let history: Vec<(Source, &commits::Commit)> = history
+            .iter()
+            .map(|commit| (Source::History, commit))
+            .collect();
+        commits::add_commits(&mut addresses, &history);
     }
     let login = contributor.login;
     Ok(Person {
