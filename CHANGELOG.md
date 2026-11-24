@@ -2,6 +2,7 @@
 
 ## 0.1.3 (Next)
 
+- [#19](https://github.com/dblock/fue-rs/pull/19): Show fue at work in an animated demo at the top of the README - [@dblock](https://github.com/dblock).
 - Your contribution here.
 
 ## 0.1.2 (2026/11/24)

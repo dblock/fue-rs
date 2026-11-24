@@ -3,6 +3,7 @@ APIs
 CHANGELOG
 CLI
 Changelog
+defunkt
 Dylint
 GraphQL
 Homebrew
@@ -35,4 +36,5 @@ rustup
 subprocess
 toolchain
 vendored
+vhs
 wiremock
