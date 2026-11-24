@@ -9,4 +9,5 @@
 - [#9](https://github.com/dblock/fue-rs/pull/9): List others' `Signed-off-by:` addresses separately and add `--sign-offs own|all|none` - [@dblock](https://github.com/dblock).
 - [#10](https://github.com/dblock/fue-rs/pull/10): Added benchmarks for searches and address handling - [@dblock](https://github.com/dblock).
 - [#11](https://github.com/dblock/fue-rs/pull/11): Fetch repository histories concurrently, making deep user searches up to 3.5 times faster - [@dblock](https://github.com/dblock).
+- [#12](https://github.com/dblock/fue-rs/pull/12): Build smaller, faster release binaries with link-time optimization and stripped symbols - [@dblock](https://github.com/dblock).
 - Your contribution here.
