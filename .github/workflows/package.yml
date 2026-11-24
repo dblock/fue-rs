@@ -40,3 +40,7 @@ jobs:
           cargo install --locked --path "$consumer/fue-$version" --root "$consumer/install"
           "$consumer/install/bin/fue" --version | grep -qx "fue $version"
           "$consumer/install/bin/fue" --help
+
+  binaries:
+    name: Binaries
+    uses: ./.github/workflows/binaries.yml

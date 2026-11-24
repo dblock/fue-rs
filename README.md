@@ -6,7 +6,13 @@ Find e-mail addresses of GitHub users and repository contributors. A Rust rewrit
 
 ## Installation
 
-fue has not been released yet. To build it from source, install [Rust](https://rustup.rs/) and run:
+fue has not been released yet. From the first release, install it with [Homebrew](https://brew.sh/) on macOS or Linux:
+
+```sh
+brew install dblock/tap/fue
+```
+
+Or download a `fue` binary for macOS, Linux, or Windows from [Releases](https://github.com/dblock/fue-rs/releases), or install it from [crates.io](https://crates.io/crates/fue) with `cargo install fue`. Until then, build it from source with [Rust](https://rustup.rs/):
 
 ```sh
 cargo install --git https://github.com/dblock/fue-rs

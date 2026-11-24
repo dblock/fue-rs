@@ -5,6 +5,7 @@ CLI
 Changelog
 Dylint
 GraphQL
+Homebrew
 Invariants
 JSON
 OpenSSL
@@ -20,12 +21,14 @@ fue's
 gh
 github
 graphql
+homebrew
 io
 lookups
 macOS
 md
 prebuilt
 rebase
+ruleset
 rustls
 rustup
 subprocess

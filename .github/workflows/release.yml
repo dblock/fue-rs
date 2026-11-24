@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional explicit stable crate version; defaults to the version in Cargo.toml.
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Release Crate
+    if: github.ref == 'refs/heads/master'
+    uses: dblock/rust-crate-release/.github/workflows/release.yml@v0.1.2
+    with:
+      tool-ref: v0.1.2
+      version: ${{ inputs.version }}
+
+  binaries:
+    name: Attach Binaries
+    needs: publish
+    permissions:
+      contents: write
+    uses: ./.github/workflows/binaries.yml
+    with:
+      tag: v${{ needs.publish.outputs.version }}

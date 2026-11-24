@@ -1,0 +1,81 @@
+name: Binaries
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to build and upload archives to; leave empty to only build and check them.
+        required: false
+        type: string
+        default: ''
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  binaries:
+    name: Binaries (${{ matrix.entry.target }})
+    runs-on: ${{ matrix.entry.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        entry:
+          - { target: aarch64-apple-darwin, os: macos-15, archive: tar.gz }
+          - { target: x86_64-apple-darwin, os: macos-15-intel, archive: tar.gz }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-24.04-arm, archive: tar.gz }
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-24.04, archive: tar.gz }
+          - { target: x86_64-pc-windows-msvc, os: windows-2025, archive: zip }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.sha }}
+          persist-credentials: false
+      - name: Set Up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0
+          targets: ${{ matrix.entry.target }}
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: binaries-${{ matrix.entry.target }}
+      - name: Install musl Tools
+        if: contains(matrix.entry.target, 'linux-musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Build Binary
+        run: cargo build --release --locked --target ${{ matrix.entry.target }}
+      - name: Package Archive
+        shell: bash
+        env:
+          TARGET: ${{ matrix.entry.target }}
+          ARCHIVE: ${{ matrix.entry.archive }}
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          name="fue-${version}-${TARGET}"
+          binary="target/${TARGET}/release/fue"
+          [ "$ARCHIVE" = zip ] && binary="${binary}.exe"
+          "$binary" --version | grep -qx "fue ${version}"
+          mkdir -p "dist/${name}"
+          cp "$binary" README.md CHANGELOG.md LICENSE "dist/${name}/"
+          cd dist
+          if [ "$ARCHIVE" = zip ]; then
+            7z a -bso0 "${name}.zip" "${name}"
+          else
+            tar -czf "${name}.tar.gz" "${name}"
+          fi
+          if command -v sha256sum > /dev/null; then
+            sha256sum "${name}.${ARCHIVE}" > "${name}.${ARCHIVE}.sha256"
+          else
+            shasum -a 256 "${name}.${ARCHIVE}" > "${name}.${ARCHIVE}.sha256"
+          fi
+          cat "${name}.${ARCHIVE}.sha256"
+      - name: Check Static Linking
+        if: contains(matrix.entry.target, 'linux-musl')
+        run: file target/${{ matrix.entry.target }}/release/fue | tee /dev/stderr | grep -qE 'statically linked|static-pie linked'
+      - name: Upload Archive to Release
+        if: inputs.tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" dist/*.${{ matrix.entry.archive }} dist/*.sha256 --clobber --repo "$GITHUB_REPOSITORY"
