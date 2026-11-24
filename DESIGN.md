@@ -8,7 +8,7 @@ fue reads only public data through the GitHub REST and GraphQL APIs, including o
 
 ## Command Line
 
-`fue` takes one or more targets: a user, such as `dblock`, or a repository, such as `dblock/fue`. Targets may also be written as `@login` or as `https://github.com/...` URLs. Results go to standard output, and diagnostics to standard error.
+`fue` takes one or more targets: a user, such as `dblock`, or a repository, such as `dblock/fue`. Targets may also be written as `@login` or as `https://github.com/...` URLs. Results go to standard output, and diagnostics to standard error. While searching, a one-character spinner turns on standard error when it is a terminal, and is erased before anything else is printed. It is a small thread in `src/spinner.rs` rather than a progress-bar library, which would add several dependencies for one character.
 
 ## Output
 

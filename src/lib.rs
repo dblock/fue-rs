@@ -8,5 +8,6 @@ pub mod graphql;
 pub mod model;
 pub mod output;
 pub mod repository;
+pub mod spinner;
 pub mod target;
 pub mod user;

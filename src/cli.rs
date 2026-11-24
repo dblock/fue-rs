@@ -12,6 +12,7 @@ use crate::github::{self, GitHub, error_message};
 use crate::model::Person;
 use crate::output::{self, Found};
 use crate::repository;
+use crate::spinner::Spinner;
 use crate::target::Target;
 use crate::user;
 
@@ -97,12 +98,15 @@ pub async fn run(args: Args) -> Result<ExitCode> {
         eprintln!("Using a GitHub token from {}.", token.source);
     }
     let github = GitHub::new(&args.api_url, &token.value)?;
+    let spinner = Spinner::start();
     let results = join_all(
         args.targets
             .iter()
             .map(|target| search(&github, target, &args)),
     )
     .await;
+    // Erased before any results or errors are written.
+    drop(spinner);
 
     let mut failed = false;
     let mut found = Vec::new();
