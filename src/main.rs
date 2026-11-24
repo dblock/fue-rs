@@ -1,26 +1,16 @@
-//! Find e-mail addresses of GitHub users and repository contributors.
+//! The `fue` command.
 
 use std::process::ExitCode;
 
 use clap::Parser;
 
-#[derive(Debug, Parser)]
-#[command(
-    name = "fue",
-    version,
-    about = "Find e-mail addresses of GitHub users and repository contributors."
-)]
-struct Args {
-    #[arg(
-        required = true,
-        value_name = "USER|OWNER/REPO",
-        help = "GitHub users, such as `dblock`, or repositories, such as `dblock/fue`."
-    )]
-    targets: Vec<String>,
-}
-
-fn main() -> ExitCode {
-    let _args = Args::parse();
-    eprintln!("error: Searching is not implemented yet.");
-    ExitCode::FAILURE
+#[tokio::main]
+async fn main() -> ExitCode {
+    match fue::cli::run(fue::cli::Args::parse()).await {
+        Ok(code) => code,
+        Err(error) => {
+            eprintln!("error: {}", fue::github::error_message(&error));
+            ExitCode::FAILURE
+        }
+    }
 }

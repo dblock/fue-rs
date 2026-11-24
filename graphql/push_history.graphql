@@ -1,0 +1,39 @@
+# A user's commits leading up to a pushed commit.
+query PushHistory(
+  $owner: String!
+  $name: String!
+  $head: GitObjectID!
+  $authorId: ID!
+  $depth: Int!
+) {
+  repository(owner: $owner, name: $name) {
+    object(oid: $head) {
+      __typename
+      ... on Commit {
+        history(first: $depth, author: { id: $authorId }) {
+          ...History
+        }
+      }
+    }
+  }
+}
+
+fragment History on CommitHistoryConnection {
+  pageInfo {
+    hasNextPage
+    endCursor
+  }
+  nodes {
+    ...CommitFields
+  }
+}
+
+fragment CommitFields on Commit {
+  oid
+  committedDate
+  message
+  author {
+    name
+    email
+  }
+}

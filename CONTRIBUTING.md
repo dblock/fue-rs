@@ -4,7 +4,7 @@ fue is the work of [many contributors](https://github.com/dblock/fue-rs/graphs/c
 
 ## Setup and Validation
 
-Install [rustup](https://rustup.rs/). The pinned toolchain in `rust-toolchain.toml` is installed automatically; the crate also supports Rust 1.85, the `rust-version` in `Cargo.toml`. Install the lint tools once:
+Install [rustup](https://rustup.rs/). The pinned toolchain in `rust-toolchain.toml` is installed automatically; fue also builds with Rust 1.85, the `rust-version` in `Cargo.toml`, which CI checks with `cargo +1.85 build --locked`; tests need the pinned toolchain. Install the lint tools once:
 
 ```sh
 cargo install rumdl --locked
@@ -31,7 +31,11 @@ cargo llvm-cov --locked --show-missing-lines
 
 ## Tests
 
-Tests live in `tests/` and run the real `fue` binary as a subprocess with [assert_cmd](https://crates.io/crates/assert_cmd). Tests must not reach the network or need credentials: point fue at a local mock of the GitHub API with `--api-url`, and use `example.com` addresses rather than real people's e-mail in fixtures. Add tests for new behavior, including errors and edge cases, and keep coverage of project code close to complete.
+Unit tests live next to the code in `src/`. CLI tests in `tests/cli.rs` run the real `fue` binary as a subprocess with [assert_cmd](https://crates.io/crates/assert_cmd) against a [wiremock](https://crates.io/crates/wiremock) mock of the GitHub REST and GraphQL APIs. Tests must not reach the network or need credentials: point fue at a local mock of the GitHub API with `--api-url`, and use `example.com` addresses rather than real people's e-mail in fixtures. Mocks match GraphQL requests by operation name, such as `OwnedRepositories`. Add tests for new behavior, including errors and edge cases, and keep coverage of project code close to complete.
+
+## GraphQL
+
+GraphQL queries live in `graphql/*.graphql` and are compiled into typed Rust by `graphql_client` derives in `src/graphql.rs`, which check them against GitHub's schema in `graphql/github.graphql`. Each query file includes the fragments it uses. To use a new field, add it to a query and let the compiler show the generated types. Update the schema as described in [graphql/README.md](graphql/README.md) when GitHub adds fields fue needs.
 
 ## Pull Requests
 
