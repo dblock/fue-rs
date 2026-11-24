@@ -1,0 +1,55 @@
+# Repositories a user contributed commits to, with the user's commits in each.
+query ContributedRepositories($login: String!, $authorId: ID!, $depth: Int!, $breadth: Int!, $cursor: String) {
+  user(login: $login) {
+    repositories: repositoriesContributedTo(
+      first: $breadth
+      after: $cursor
+      privacy: PUBLIC
+      contributionTypes: [COMMIT]
+      includeUserRepositories: false
+      orderBy: { field: PUSHED_AT, direction: DESC }
+    ) {
+      ...Repositories
+    }
+  }
+}
+
+fragment Repositories on RepositoryConnection {
+  pageInfo {
+    hasNextPage
+    endCursor
+  }
+  nodes {
+    nameWithOwner
+    defaultBranchRef {
+      target {
+        __typename
+        ... on Commit {
+          history(first: $depth, author: { id: $authorId }) {
+            ...History
+          }
+        }
+      }
+    }
+  }
+}
+
+fragment History on CommitHistoryConnection {
+  pageInfo {
+    hasNextPage
+    endCursor
+  }
+  nodes {
+    ...CommitFields
+  }
+}
+
+fragment CommitFields on Commit {
+  oid
+  committedDate
+  message
+  author {
+    name
+    email
+  }
+}

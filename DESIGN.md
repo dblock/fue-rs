@@ -22,7 +22,14 @@ fue shows every address it finds, grouped by person. Each address is one aligned
 
 ## Sources
 
-For a user, fue merges four sources and records which ones found each address: the public profile e-mail, commit authors in recent public activity, commit history in repositories the user owns, has forked, or has contributed to, and `Signed-off-by:` lines in those commits. A commit seen by more than one source is counted once. Addresses are merged case-insensitively.
+For a user, fue merges four sources and records which ones found each address. A commit seen by more than one source is counted once, and addresses are merged case-insensitively.
+
+- **Profile:** the public e-mail on the user's profile, from `GET /users/{login}`, which also gives the user ID used to filter commits by author.
+- **Activity:** the user's commits leading up to their 10 most recent public pushes, up to 10 commits each. Push events no longer list commits, so each push's head commit is looked up, with the lookups running concurrently.
+- **History:** the user's commits on the default branch of repositories they own, including forks, and of repositories they contributed commits to, most recently pushed first. `--breadth` (default 10) limits repositories and `--depth` (default 1) limits commits per repository; both page past GitHub's limit of 100 per request.
+- **Signed-off-by:** names and addresses in `Signed-off-by:` lines of those commits, which may belong to people other than the user.
+
+The profile is read first; activity and both history searches then run concurrently. A repository deleted since a push is skipped.
 
 For a repository, fue reads the addresses contributors used in that repository's own history, including commit authors without a GitHub account, and lists people by commit count. `--limit` caps the number of people for large projects.
 
@@ -32,7 +39,7 @@ fue uses `--token`, then the `GH_TOKEN` or `GITHUB_TOKEN` environment variables,
 
 ## Implementation
 
-fue is a Rust 2024 crate requiring Rust 1.85 or newer; development is pinned to a current stable toolchain in `rust-toolchain.toml`. It uses `clap` for arguments, `reqwest` with rustls for HTTP so Linux binaries can be built statically without OpenSSL, `tokio` for concurrent requests, and `serde` for JSON. Tests run the binary against a local mock of the GitHub API selected with `--api-url`, so they need no network or credentials.
+fue is a Rust 2024 crate requiring Rust 1.85 or newer; development is pinned to a current stable toolchain in `rust-toolchain.toml`. It uses `clap` for arguments, `reqwest` with rustls for HTTP so Linux binaries can be built statically without OpenSSL, `tokio` for concurrent requests, and `serde` for JSON. GraphQL queries are `.graphql` files in `graphql/`, compiled into typed Rust with [graphql_client](https://crates.io/crates/graphql_client) and checked against GitHub's published schema, which is vendored unmodified with its provenance and CC BY 4.0 attribution in [graphql/README.md](graphql/README.md). A misspelled field or argument fails the build instead of a request. Requests go through fue's own client, which reads GitHub's `NOT_FOUND` error type to skip deleted repositories. Tests run the binary against a local [wiremock](https://crates.io/crates/wiremock) mock of the GitHub API selected with `--api-url`, so they need no network or credentials. Test dependencies need a newer Rust than the minimum, so CI builds fue on Rust 1.85 and runs tests on the pinned toolchain.
 
 ## Distribution
 

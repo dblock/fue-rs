@@ -14,7 +14,33 @@ cargo install --git https://github.com/dblock/fue-rs
 
 ## Usage
 
-Searching is not implemented yet. See [DESIGN](DESIGN.md) for the planned behavior.
+Log in with the [GitHub CLI](https://cli.github.com/) once with `gh auth login`, or set `GH_TOKEN`. Then search one or more users:
+
+```sh
+fue octocat
+```
+
+```text
+@octocat
+  octocat@example.com                 The Octocat  12 commits, last 2026-11-20
+  work@example.com                    Octo Worker  1 commit, last 2025-05-01
+  1+octocat@users.noreply.github.com  octocat      3 commits, last 2024-01-10  noreply
+```
+
+fue shows every address it finds, real addresses first and most recently used first. `noreply` addresses do not receive e-mail. Searching repositories, such as `fue octocat/hello-world`, is not supported yet.
+
+## Configuration
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--depth COMMITS` | `1` | Commits by the user to look through in each repository. |
+| `--breadth REPOSITORIES` | `10` | Repositories to look through, most recently pushed first. |
+| `--json` | | Print JSON. |
+| `-v`, `--verbose` | | Show every name, the sources of each address, and where the token came from. |
+| `--token TOKEN` | `GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token` | GitHub token. |
+| `--api-url URL` | `https://api.github.com` | GitHub API, such as `https://ghe.example.com/api/v3` for GitHub Enterprise Server. |
+
+fue reads public data only. See [DESIGN](DESIGN.md) for the sources it searches.
 
 ## Contributing
 

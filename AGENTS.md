@@ -4,7 +4,7 @@ Read [CONTRIBUTING](CONTRIBUTING.md) and [DESIGN](DESIGN.md) first.
 
 ## Project
 
-fue is a Rust command-line tool that finds e-mail addresses of GitHub users and repository contributors from public GitHub API data. Non-goals: scraping web pages or other sites, sending e-mail, storing tokens, and correlating linked accounts. The binary is `src/main.rs`; CLI subprocess tests are in `tests/`. The crate supports Rust 1.85 (`rust-version`) and is developed on the toolchain pinned in `rust-toolchain.toml`.
+fue is a Rust command-line tool that finds e-mail addresses of GitHub users and repository contributors from public GitHub API data. Non-goals: scraping web pages or other sites, sending e-mail, storing tokens, and correlating linked accounts. The binary is `src/main.rs`; the library modules in `src/` cover arguments (`cli.rs`), targets (`target.rs`), tokens (`auth.rs`), the API client (`github.rs`), typed GraphQL queries (`graphql.rs`, with the queries and GitHub's schema in `graphql/`), commits and history paging (`commits.rs`), addresses (`model.rs`), output (`output.rs`), and user search (`user.rs`). CLI subprocess tests against a mock API are in `tests/cli.rs`. fue builds with Rust 1.85 (`rust-version`) and is developed and tested on the toolchain pinned in `rust-toolchain.toml`; do not use language features newer than 1.85, such as `let` chains, in `src/`.
 
 ## Invariants
 
@@ -13,6 +13,8 @@ fue is a Rust command-line tool that finds e-mail addresses of GitHub users and 
 - Never store, log, or print tokens.
 - Tests must not use the network or credentials; point fue at a local mock API with `--api-url`.
 - Use `example.com` addresses in tests and documentation, never real people's e-mail.
+- Write GraphQL queries as `.graphql` files with typed `graphql_client` derives, never as query strings in Rust.
+- Keep `graphql/github.graphql` unmodified, and record its source commit in `graphql/README.md` when updating it.
 - Do not weaken lint settings or add broad lint exceptions; scope any exception narrowly with a concrete reason.
 
 ## Validation

@@ -1,0 +1,41 @@
+# Commits by an author on a repository's default branch, a page at a time.
+query RepositoryHistory(
+  $owner: String!
+  $name: String!
+  $author: CommitAuthor!
+  $depth: Int!
+  $cursor: String
+) {
+  repository(owner: $owner, name: $name) {
+    defaultBranchRef {
+      target {
+        __typename
+        ... on Commit {
+          history(first: $depth, after: $cursor, author: $author) {
+            ...History
+          }
+        }
+      }
+    }
+  }
+}
+
+fragment History on CommitHistoryConnection {
+  pageInfo {
+    hasNextPage
+    endCursor
+  }
+  nodes {
+    ...CommitFields
+  }
+}
+
+fragment CommitFields on Commit {
+  oid
+  committedDate
+  message
+  author {
+    name
+    email
+  }
+}
