@@ -24,6 +24,7 @@ tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"
+criterion = { version = "0.8.2", features = ["async_tokio"] }
 predicates = "3.1.4"
 wiremock = "0.6.5"
 
@@ -35,3 +36,11 @@ libraries = [
 [[example]]
 name = "logo"
 test = true
+
+[[bench]]
+name = "addresses"
+harness = false
+
+[[bench]]
+name = "search"
+harness = false

@@ -43,6 +43,24 @@ jobs:
       - name: Run Checks
         run: cargo +${{ matrix.entry.rust }} ${{ matrix.entry.check }} --locked
 
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set Up Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.100.0
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: benchmarks
+      - name: Run Each Benchmark Once
+        run: cargo bench --locked --benches -- --test
+
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
