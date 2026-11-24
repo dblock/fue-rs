@@ -394,6 +394,71 @@ async fn pages_through_commits() {
         );
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn fetches_remaining_history_of_each_repository() {
+    let server = MockServer::start().await;
+    mock_user(&server, "octocat", json!({ "email": null })).await;
+    let names = ["one", "two", "three"];
+    Mock::given(method("POST"))
+        .and(path("/graphql"))
+        .and(body_string_contains(OWNED))
+        .and(body_partial_json(
+            json!({ "variables": { "breadth": 3, "depth": 66 } }),
+        ))
+        .respond_with(graphql(repositories(
+            names
+                .iter()
+                .map(|name| {
+                    repository(
+                        &format!("octocat/{name}"),
+                        history(
+                            vec![commit(
+                                &format!("{name}-first"),
+                                "2026-01-01",
+                                "Octo",
+                                "first@example.com",
+                                "",
+                            )],
+                            Some("h1"),
+                        ),
+                    )
+                })
+                .collect(),
+            None,
+        )))
+        .with_priority(1)
+        .expect(1)
+        .mount(&server)
+        .await;
+    for (index, name) in names.iter().enumerate() {
+        Mock::given(method("POST"))
+            .and(path("/graphql"))
+            .and(body_string_contains(MORE_HISTORY))
+            .and(body_partial_json(json!({ "variables": { "name": name, "depth": 34, "cursor": "h1" } })))
+            .respond_with(graphql(json!({
+                "repository": repository(
+                    &format!("octocat/{name}"),
+                    history(vec![commit(&format!("{name}-older"), &format!("2025-0{}-01", index + 1), "Octo", &format!("{name}@example.com"), "")], None),
+                )
+            })))
+            .with_priority(1)
+            .expect(1)
+            .mount(&server)
+            .await;
+    }
+    fue(&server)
+        .args(["--breadth", "3", "--depth", "100", "octocat"])
+        .assert()
+        .success()
+        .stdout(
+            "@octocat\n\
+             \x20 first@example.com  Octo  3 commits, last 2026-01-01\n\
+             \x20 three@example.com  Octo  1 commit, last 2025-03-01\n\
+             \x20 two@example.com    Octo  1 commit, last 2025-02-01\n\
+             \x20 one@example.com    Octo  1 commit, last 2025-01-01\n",
+        );
+}
+
 /// Variables of the GraphQL requests named `operation` that the server received.
 async fn graphql_variables(server: &MockServer, operation: &str) -> Vec<Value> {
     server

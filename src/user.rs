@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 
 use anyhow::{Result, anyhow};
 use futures::future::join_all;
+use futures::stream::{self, StreamExt, TryStreamExt};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -172,6 +173,24 @@ async fn repositories(
     })
 }
 
+/// Repositories whose remaining history is fetched at the same time.
+const CONCURRENT_HISTORIES: usize = 8;
+
+/// How to page through `breadth` repositories looking at `depth` commits in each: repositories per request, and commits per repository in that request. Repository pages are fetched one after another, while each repository's remaining history is fetched concurrently, so this picks the plan with the fewest round trips, assuming every repository has `depth` commits by the user.
+pub fn plan(breadth: usize, depth: usize) -> (usize, usize) {
+    let inline_depth = |per_request: usize| depth.min(COMMITS_PER_REQUEST / per_request).min(PAGE);
+    let round_trips = |per_request: usize| {
+        let remaining = depth - inline_depth(per_request);
+        breadth.div_ceil(per_request)
+            + breadth.div_ceil(CONCURRENT_HISTORIES) * remaining.div_ceil(PAGE)
+    };
+    let per_request = (1..=breadth.clamp(1, PAGE))
+        .rev()
+        .min_by_key(|per_request| round_trips(*per_request))
+        .unwrap_or(1);
+    (per_request, inline_depth(per_request))
+}
+
 /// The user's commits on the default branch of each repository, up to `limits`.
 async fn history(
     github: &GitHub,
@@ -180,9 +199,7 @@ async fn history(
     limits: Limits,
 ) -> Result<Vec<Commit>> {
     let author = Author::Id(user.node_id.clone());
-    let depth = limits.depth.min(PAGE);
-    // Fewer repositories per request when looking through more commits in each.
-    let repositories_per_request = (COMMITS_PER_REQUEST / depth).clamp(1, PAGE);
+    let (repositories_per_request, inline_depth) = plan(limits.breadth, limits.depth);
     let mut commits = Vec::new();
     let mut cursor: Option<String> = None;
     let mut remaining = limits.breadth;
@@ -192,7 +209,7 @@ async fn history(
             github,
             user,
             connection,
-            depth as i64,
+            inline_depth as i64,
             breadth as i64,
             cursor,
         )
@@ -200,26 +217,37 @@ async fn history(
         else {
             break;
         };
+        let mut more = Vec::new();
         for (name_with_owner, history) in page.repositories {
             commits.extend(history.commits);
             // GitHub always returns `owner/name`; this guards against malformed responses.
-            let repository = name_with_owner.split_once('/');
-            if let (Some(next), Some((owner, name)), true) =
-                (history.next, repository, limits.depth > PAGE)
-            {
-                commits.extend(
-                    commits::repository_history(
-                        github,
-                        owner,
-                        name,
-                        &author,
-                        Some(next),
-                        limits.depth - PAGE,
-                    )
-                    .await?,
-                );
+            if let (Some(next), Some((owner, name)), true) = (
+                history.next,
+                name_with_owner.split_once('/'),
+                limits.depth > inline_depth,
+            ) {
+                more.push((owner.to_string(), name.to_string(), next));
             }
         }
+        let histories: Vec<Vec<Commit>> = stream::iter(more)
+            .map(|(owner, name, next)| {
+                let author = &author;
+                async move {
+                    commits::repository_history(
+                        github,
+                        &owner,
+                        &name,
+                        author,
+                        Some(next),
+                        limits.depth - inline_depth,
+                    )
+                    .await
+                }
+            })
+            .buffer_unordered(CONCURRENT_HISTORIES)
+            .try_collect()
+            .await?;
+        commits.extend(histories.into_iter().flatten());
         remaining -= breadth;
         match page.next {
             Some(next) => cursor = Some(next),
@@ -227,4 +255,23 @@ async fn history(
         }
     }
     Ok(commits)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plans_requests() {
+        // Shallow searches list 100 repositories per request.
+        assert_eq!(plan(100, 1), (100, 1));
+        assert_eq!(plan(150, 2), (100, 2));
+        // Fetching remaining history would take more round trips than smaller pages.
+        assert_eq!(plan(100, 10), (20, 10));
+        // Deep searches list every repository at once, then fetch histories concurrently.
+        assert_eq!(plan(100, 100), (100, 2));
+        assert_eq!(plan(10, 100), (10, 20));
+        assert_eq!(plan(2, 250), (2, 100));
+        assert_eq!(plan(1, 1), (1, 1));
+    }
 }
