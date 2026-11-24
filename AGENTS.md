@@ -4,7 +4,12 @@ Read [CONTRIBUTING](CONTRIBUTING.md) and [DESIGN](DESIGN.md) first.
 
 ## Project
 
-fue is a Rust command-line tool that finds e-mail addresses of GitHub users and repository contributors from public GitHub API data. Non-goals: scraping web pages or other sites, sending e-mail, storing tokens, and correlating linked accounts. The binary is `src/main.rs`; the library modules in `src/` cover arguments (`cli.rs`), targets (`target.rs`), tokens (`auth.rs`), the API client (`github.rs`), typed GraphQL queries (`graphql.rs`, with the queries and GitHub's schema in `graphql/`), commits and history paging (`commits.rs`), addresses (`model.rs`), output (`output.rs`), user search (`user.rs`), and repository search (`repository.rs`). CLI subprocess tests against a mock API are in `tests/cli.rs`. `examples/logo.rs` generates `assets/logo.svg`; never edit the SVG by hand. fue builds with Rust 1.85 (`rust-version`) and is developed and tested on the toolchain pinned in `rust-toolchain.toml`; do not use language features newer than 1.85, such as `let` chains, in `src/`.
+fue is a Rust command-line tool that finds e-mail addresses of GitHub users and repository contributors from public GitHub API data. Non-goals: scraping web pages or other sites, sending e-mail, storing tokens, and correlating linked accounts.
+
+- `src/main.rs` is the binary. Library modules: `cli.rs` (arguments), `target.rs` (targets), `auth.rs` (tokens), `github.rs` (API client), `graphql.rs` (typed queries, from `graphql/`), `commits.rs` (commits, sign-offs, and history paging), `model.rs` (addresses), `output.rs` (text and JSON), `user.rs` and `repository.rs` (searches).
+- `tests/cli.rs` runs the binary against a mock API; `benches/` holds benchmarks.
+- `examples/logo.rs` generates `assets/logo.svg`; never edit the SVG by hand.
+- fue builds with Rust 1.85 (`rust-version`) and is developed on the toolchain in `rust-toolchain.toml`. Do not use language features newer than 1.85, such as `let` chains, in `src/`.
 
 ## Invariants
 
@@ -30,7 +35,7 @@ RUSTFLAGS="-D warnings" cargo dylint --all -- --all-targets
 cargo package --locked
 ```
 
-Measure performance changes with the benchmarks in `benches/`, comparing against a baseline as described in CONTRIBUTING, and report the numbers. Check coverage with `cargo llvm-cov --locked --show-missing-lines` and add behavioral tests for uncovered paths rather than trivial assertions. CI runs Test on Linux, macOS, and Windows and on Rust 1.85, plus Lint, Package (including release binaries for every target in `.github/workflows/binaries.yml`), and Coveralls coverage.
+Check coverage with `cargo llvm-cov --locked --show-missing-lines`, and add behavioral tests for uncovered paths rather than trivial assertions. Measure performance changes against a benchmark baseline, as described in CONTRIBUTING, and report the numbers.
 
 ## Conventions
 
