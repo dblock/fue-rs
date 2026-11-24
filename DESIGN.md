@@ -43,4 +43,4 @@ fue is a Rust 2024 crate requiring Rust 1.85 or newer; development is pinned to 
 
 ## Distribution
 
-Releases will publish the crate to crates.io, attach prebuilt archives for macOS, Linux, and Windows to GitHub Releases, and update a formula in a shared `dblock/homebrew-tap` that installs those archives with `brew install dblock/tap/fue`. See [RELEASING](RELEASING.md).
+Releases publish the crate to crates.io with [rust-crate-release](https://github.com/dblock/rust-crate-release) and attach prebuilt archives with SHA-256 checksums to the GitHub Release: `tar.gz` for macOS on Apple silicon and Intel and for statically linked Linux on arm64 and x86_64, and `zip` for Windows on x86_64. Every pull request builds and runs the same binaries. A formula in the shared [dblock/homebrew-tap](https://github.com/dblock/homebrew-tap) installs those archives with `brew install dblock/tap/fue`. See [RELEASING](RELEASING.md).
