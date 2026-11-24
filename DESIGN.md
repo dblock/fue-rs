@@ -41,6 +41,10 @@ fue uses `--token`, then the `GH_TOKEN` or `GITHUB_TOKEN` environment variables,
 
 fue is a Rust 2024 crate requiring Rust 1.85 or newer; development is pinned to a current stable toolchain in `rust-toolchain.toml`. It uses `clap` for arguments, `reqwest` with rustls for HTTP so Linux binaries can be built statically without OpenSSL, `tokio` for concurrent requests, and `serde` for JSON. GraphQL queries are `.graphql` files in `graphql/`, compiled into typed Rust with [graphql_client](https://crates.io/crates/graphql_client) and checked against GitHub's published schema, which is vendored unmodified with its provenance and CC BY 4.0 attribution in [graphql/README.md](graphql/README.md). A misspelled field or argument fails the build instead of a request. Requests go through fue's own client, which reads GitHub's `NOT_FOUND` error type to skip deleted repositories. Tests run the binary against a local [wiremock](https://crates.io/crates/wiremock) mock of the GitHub API selected with `--api-url`, so they need no network or credentials. Test dependencies need a newer Rust than the minimum, so CI builds fue on Rust 1.85 and runs tests on the pinned toolchain.
 
+## Logo
+
+The logo is a unicorn whose eye is an `@`, a nod to the original name, Finding Unicorn Engineers. It is original artwork, generated as `assets/logo.svg` by `examples/logo.rs` with no dependencies, and the `@` is drawn as strokes so it does not depend on fonts. To change it, edit the example and run `cargo run --example logo`; `cargo test` fails while the committed SVG differs from the generated one.
+
 ## Distribution
 
 Releases publish the crate to crates.io with [rust-crate-release](https://github.com/dblock/rust-crate-release) and attach prebuilt archives with SHA-256 checksums to the GitHub Release: `tar.gz` for macOS on Apple silicon and Intel and for statically linked Linux on arm64 and x86_64, and `zip` for Windows on x86_64. Every pull request builds and runs the same binaries. A formula in the shared [dblock/homebrew-tap](https://github.com/dblock/homebrew-tap) installs those archives with `brew install dblock/tap/fue`. See [RELEASING](RELEASING.md).

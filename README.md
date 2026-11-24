@@ -1,3 +1,5 @@
+<img src="assets/logo.svg" alt="A white unicorn in profile with a rainbow mane and an @ for an eye." width="160"> <!-- rumdl-disable-line MD033 MD041 -->
+
 # fue
 
 [![Test](https://github.com/dblock/fue-rs/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/dblock/fue-rs/actions/workflows/test.yml) [![Lint](https://github.com/dblock/fue-rs/actions/workflows/lint.yml/badge.svg?branch=master)](https://github.com/dblock/fue-rs/actions/workflows/lint.yml) [![Package](https://github.com/dblock/fue-rs/actions/workflows/package.yml/badge.svg?branch=master)](https://github.com/dblock/fue-rs/actions/workflows/package.yml) [![Coverage Status](https://coveralls.io/repos/github/dblock/fue-rs/badge.svg?branch=master)](https://coveralls.io/github/dblock/fue-rs?branch=master)
