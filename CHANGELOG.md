@@ -1,9 +1,8 @@
 # Changelog
 
-## 0.1.2 (Next)
+## 0.1.2 (2026/11/24)
 
 - [#15](https://github.com/dblock/fue-rs/pull/15): Show a spinner while searching in a terminal - [@dblock](https://github.com/dblock).
-- Your contribution here.
 
 ## 0.1.1 (2026/11/24)
 
