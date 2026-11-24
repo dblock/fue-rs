@@ -26,7 +26,7 @@ For a user, fue merges four sources and records which ones found each address. A
 
 - **Profile:** the public e-mail on the user's profile, from `GET /users/{login}`, which also gives the user ID used to filter commits by author.
 - **Activity:** the user's commits leading up to their 10 most recent public pushes, up to 10 commits each. Push events no longer list commits, so each push's head commit is looked up, with the lookups running concurrently.
-- **History:** the user's commits on the default branch of repositories they own, including forks, and of repositories they contributed commits to, most recently pushed first. `--breadth` (default 10) limits repositories and `--depth` (default 1) limits commits per repository; both page past GitHub's limit of 100 per request.
+- **History:** the user's commits on the default branch of repositories they own, including forks, and of repositories they contributed commits to, most recently pushed first. `--breadth` (default 10) limits repositories and `--depth` (default 1) limits commits per repository; both page past GitHub's limit of 100 per request. GitHub times out when filtering many commits by author at once, so each request asks for at most 200 commits, with fewer repositories per request as `--depth` grows, and a GraphQL request that fails with a 502, 503, or 504 is retried once.
 - **Signed-off-by:** names and addresses in `Signed-off-by:` lines of those commits, which may belong to people other than the user.
 
 The profile is read first; activity and both history searches then run concurrently. A repository deleted since a push is skipped.
