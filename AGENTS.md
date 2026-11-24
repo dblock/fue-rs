@@ -6,7 +6,7 @@ Read [CONTRIBUTING](CONTRIBUTING.md) and [DESIGN](DESIGN.md) first.
 
 fue is a Rust command-line tool that finds e-mail addresses of GitHub users and repository contributors from public GitHub API data. Non-goals: scraping web pages or other sites, sending e-mail, storing tokens, and correlating linked accounts.
 
-- `src/main.rs` is the binary. Library modules: `cli.rs` (arguments), `target.rs` (targets), `auth.rs` (tokens), `github.rs` (API client), `graphql.rs` (typed queries, from `graphql/`), `commits.rs` (commits, sign-offs, and history paging), `model.rs` (addresses), `output.rs` (text and JSON), `user.rs` and `repository.rs` (searches).
+- `src/main.rs` is the binary. Library modules: `cli.rs` (arguments), `target.rs` (targets), `auth.rs` (tokens), `github.rs` (API client), `graphql.rs` (typed queries, from `graphql/`), `commits.rs` (commits, sign-offs, and history paging), `model.rs` (addresses), `output.rs` (text and JSON), `spinner.rs` (the terminal spinner), `user.rs` and `repository.rs` (searches).
 - `tests/cli.rs` runs the binary against a mock API; `benches/` holds benchmarks.
 - `examples/logo.rs` generates `assets/logo.svg`; never edit the SVG by hand.
 - fue builds with Rust 1.85 (`rust-version`) and is developed on the toolchain in `rust-toolchain.toml`. Do not use language features newer than 1.85, such as `let` chains, in `src/`.
