@@ -49,6 +49,8 @@ pub struct Person {
     pub login: Option<String>,
     pub name: Option<String>,
     pub addresses: Vec<Address>,
+    /// Addresses in `Signed-off-by:` lines of this person's commits that belong to other people, such as reviewers.
+    pub signed_off_by_others: Vec<Address>,
 }
 
 #[derive(Default)]

@@ -58,6 +58,7 @@ Anon Person (no GitHub account)
 | `--depth COMMITS` | `1` for a user, `100` for a repository | Commits to look through in each repository for a user, or for each contributor of a repository. |
 | `--breadth REPOSITORIES` | `10` | Repositories to look through for a user, most recently pushed first. |
 | `--limit CONTRIBUTORS` | `10` | Contributors to show for a repository, most commits first. |
+| `--sign-offs own\|all\|none` | `own` | `Signed-off-by:` addresses to count as a person's: their own, every one, or none. With `own`, others' sign-offs, such as reviewers', are listed separately with `--verbose` and in JSON. |
 | `--json` | | Print JSON. |
 | `-v`, `--verbose` | | Show every name, the sources of each address, and where the token came from. |
 | `--token TOKEN` | `GH_TOKEN`, `GITHUB_TOKEN`, or `gh auth token` | GitHub token. |

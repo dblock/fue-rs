@@ -4,7 +4,7 @@ use anyhow::{Result, anyhow};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use serde::Deserialize;
 
-use crate::commits::{self, Author, PAGE};
+use crate::commits::{self, Author, PAGE, SignOffs};
 use crate::github::GitHub;
 use crate::model::{AddressBook, Person, Source};
 
@@ -15,6 +15,8 @@ pub struct Limits {
     pub depth: usize,
     /// Contributors, most commits first.
     pub limit: usize,
+    /// Which `Signed-off-by:` addresses count as a contributor's.
+    pub sign_offs: SignOffs,
 }
 
 /// Contributors searched at the same time.
@@ -38,7 +40,7 @@ pub async fn search(
 ) -> Result<Vec<Person>> {
     let contributors = contributors(github, owner, name, limits.limit).await?;
     stream::iter(contributors)
-        .map(|contributor| person(github, owner, name, contributor, limits.depth))
+        .map(|contributor| person(github, owner, name, contributor, limits))
         .buffered(CONCURRENCY)
         .try_collect()
         .await
@@ -75,9 +77,10 @@ async fn person(
     owner: &str,
     name: &str,
     contributor: Contributor,
-    depth: usize,
+    limits: Limits,
 ) -> Result<Person> {
     let mut addresses = AddressBook::default();
+    let mut others = AddressBook::default();
     let author = match (&contributor.node_id, &contributor.email) {
         (Some(id), _) => Some(Author::Id(id.clone())),
         (None, Some(email)) => {
@@ -89,12 +92,12 @@ async fn person(
     };
     if let Some(author) = author {
         let history =
-            commits::repository_history(github, owner, name, &author, None, depth).await?;
+            commits::repository_history(github, owner, name, &author, None, limits.depth).await?;
         let history: Vec<(Source, &commits::Commit)> = history
             .iter()
             .map(|commit| (Source::History, commit))
             .collect();
-        commits::add_commits(&mut addresses, &history);
+        commits::add_commits(&mut addresses, &mut others, &history, limits.sign_offs);
     }
     let login = contributor.login;
     Ok(Person {
@@ -105,5 +108,6 @@ async fn person(
         },
         login,
         addresses: addresses.into_addresses(),
+        signed_off_by_others: others.into_addresses(),
     })
 }

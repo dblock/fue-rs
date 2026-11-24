@@ -7,6 +7,7 @@ use clap::Parser;
 use futures::future::join_all;
 
 use crate::auth;
+use crate::commits::SignOffs;
 use crate::github::{self, GitHub, error_message};
 use crate::model::Person;
 use crate::output::{self, Found};
@@ -68,6 +69,15 @@ pub struct Args {
         help = "Contributors to show for a repository, most commits first."
     )]
     pub limit: u32,
+
+    #[arg(
+        long,
+        value_enum,
+        value_name = "SIGN_OFFS",
+        default_value_t = SignOffs::Own,
+        help = "Signed-off-by addresses to count as a person's: own, those of the same person, listing others' with --verbose and in JSON; all; or none."
+    )]
+    pub sign_offs: SignOffs,
 
     #[arg(long, help = "Print JSON.")]
     pub json: bool,
@@ -133,6 +143,7 @@ async fn search(github: &GitHub, target: &Target, args: &Args) -> Result<Vec<Per
             let limits = user::Limits {
                 depth: depth.unwrap_or(1),
                 breadth: args.breadth as usize,
+                sign_offs: args.sign_offs,
             };
             Ok(vec![user::search(github, login, limits).await?])
         }
@@ -140,6 +151,7 @@ async fn search(github: &GitHub, target: &Target, args: &Args) -> Result<Vec<Per
             let limits = repository::Limits {
                 depth: depth.unwrap_or(100),
                 limit: args.limit as usize,
+                sign_offs: args.sign_offs,
             };
             repository::search(github, owner, name, limits).await
         }

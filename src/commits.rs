@@ -43,18 +43,40 @@ pub enum Author {
     Email(String),
 }
 
-/// Adds the commits' author addresses, then the `Signed-off-by:` addresses of the same person: sign-offs with the commit author's address or name, or with an address the person used elsewhere, such as on another commit or their profile.
-pub fn add_commits(addresses: &mut AddressBook, commits: &[(Source, &Commit)]) {
+/// Which `Signed-off-by:` addresses count as a person's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, clap::ValueEnum)]
+pub enum SignOffs {
+    /// Sign-offs by the same person; others are listed separately.
+    #[default]
+    Own,
+    /// Every sign-off on the person's commits.
+    All,
+    /// No sign-offs.
+    None,
+}
+
+/// Adds the commits' author addresses to `addresses`, then their `Signed-off-by:` addresses. With [`SignOffs::Own`], a sign-off is the person's when it has the commit author's address or name, or an address the person used elsewhere, such as on another commit or their profile; other sign-offs go to `others`.
+pub fn add_commits(
+    addresses: &mut AddressBook,
+    others: &mut AddressBook,
+    commits: &[(Source, &Commit)],
+    sign_offs: SignOffs,
+) {
     for (source, commit) in commits {
         if let Some(email) = &commit.author_email {
             addresses.add(email, commit.author_name.as_deref(), *source, used(commit));
         }
     }
+    if sign_offs == SignOffs::None {
+        return;
+    }
     for (_, commit) in commits {
         for (name, email) in signed_off_by(&commit.message) {
-            if signed_off_by_author(commit, name, email) || addresses.contains(email) {
-                addresses.add(email, name, Source::SignedOffBy, used(commit));
-            }
+            let own = sign_offs == SignOffs::All
+                || signed_off_by_author(commit, name, email)
+                || addresses.contains(email);
+            let book = if own { &mut *addresses } else { &mut *others };
+            book.add(email, name, Source::SignedOffBy, used(commit));
         }
     }
 }
@@ -173,17 +195,55 @@ mod tests {
     }
 
     fn emails_of(commits: &[&Commit]) -> Vec<String> {
+        sorted(commits, SignOffs::Own).0
+    }
+
+    /// The person's addresses and others' sign-off addresses.
+    fn sorted(commits: &[&Commit], sign_offs: SignOffs) -> (Vec<String>, Vec<String>) {
         let mut addresses = AddressBook::default();
+        let mut others = AddressBook::default();
         let commits: Vec<(Source, &Commit)> = commits
             .iter()
             .map(|commit| (Source::History, *commit))
             .collect();
-        add_commits(&mut addresses, &commits);
-        addresses
-            .into_addresses()
-            .into_iter()
-            .map(|address| address.email)
-            .collect()
+        add_commits(&mut addresses, &mut others, &commits, sign_offs);
+        let emails = |book: AddressBook| -> Vec<String> {
+            book.into_addresses()
+                .into_iter()
+                .map(|address| address.email)
+                .collect()
+        };
+        (emails(addresses), emails(others))
+    }
+
+    #[test]
+    fn lists_others_sign_offs_separately() {
+        let commit = commit(
+            Some("The Octocat"),
+            Some("octocat@example.com"),
+            "Fix.\n\nSigned-off-by: Mona Lisa <mona@example.com>",
+        );
+        assert_eq!(
+            sorted(&[&commit], SignOffs::Own),
+            (
+                vec!["octocat@example.com".to_string()],
+                vec!["mona@example.com".to_string()]
+            )
+        );
+        assert_eq!(
+            sorted(&[&commit], SignOffs::All),
+            (
+                vec![
+                    "mona@example.com".to_string(),
+                    "octocat@example.com".to_string()
+                ],
+                vec![]
+            )
+        );
+        assert_eq!(
+            sorted(&[&commit], SignOffs::None),
+            (vec!["octocat@example.com".to_string()], vec![])
+        );
     }
 
     #[test]

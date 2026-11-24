@@ -232,7 +232,33 @@ async fn merges_every_source() {
         .assert()
         .success()
         .stdout(predicate::str::contains("via profile, activity, history"))
+        .stdout(predicate::str::contains(
+            "  Signed off by others:\n    mona@example.com  Mona  1 commit, last 2024-01-10  via signed-off-by\n",
+        ))
         .stderr("Using a GitHub token from --token.\n");
+    fue(&server)
+        .arg("octocat")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("mona@example.com").not());
+
+    let others = &value[0]["people"][0]["signed_off_by_others"];
+    assert_eq!(others.as_array().unwrap().len(), 1);
+    assert_eq!(others[0]["email"], "mona@example.com");
+    assert_eq!(others[0]["sources"], json!(["signed-off-by"]));
+
+    fue(&server)
+        .args(["--sign-offs", "all", "octocat"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("  mona@example.com "))
+        .stdout(predicate::str::contains("Signed off by others").not());
+    fue(&server)
+        .args(["--sign-offs", "none", "octocat"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("octocat@real.example.com").not())
+        .stdout(predicate::str::contains("mona@example.com").not());
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -615,7 +641,8 @@ async fn prints_json() {
                     "last_used": null,
                     "noreply": false,
                     "sources": ["profile"]
-                }]
+                }],
+                "signed_off_by_others": []
             }]
         }])
     );

@@ -7,7 +7,7 @@ use futures::future::join_all;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::commits::{self, Author, Commit, PAGE, Page, RepositoryPage};
+use crate::commits::{self, Author, Commit, PAGE, Page, RepositoryPage, SignOffs};
 use crate::github::GitHub;
 use crate::graphql::{
     ContributedRepositories, OwnedRepositories, PushHistory, contributed_repositories,
@@ -22,6 +22,8 @@ pub struct Limits {
     pub depth: usize,
     /// Repositories, most recently pushed first.
     pub breadth: usize,
+    /// Which `Signed-off-by:` addresses count as the user's.
+    pub sign_offs: SignOffs,
 }
 
 /// Recent pushes looked up for the activity source.
@@ -65,11 +67,13 @@ pub async fn search(github: &GitHub, login: &str, limits: Limits) -> Result<Pers
                 .map(|commit| (Source::History, commit)),
         )
         .collect();
-    commits::add_commits(&mut addresses, &all);
+    let mut others = AddressBook::default();
+    commits::add_commits(&mut addresses, &mut others, &all, limits.sign_offs);
     Ok(Person {
         login: Some(user.login),
         name: user.name,
         addresses: addresses.into_addresses(),
+        signed_off_by_others: others.into_addresses(),
     })
 }
 
