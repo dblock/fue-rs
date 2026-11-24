@@ -30,7 +30,7 @@ RUSTFLAGS="-D warnings" cargo dylint --all -- --all-targets
 cargo package --locked
 ```
 
-Check coverage with `cargo llvm-cov --locked --show-missing-lines` and add behavioral tests for uncovered paths rather than trivial assertions. CI runs Test on Linux, macOS, and Windows and on Rust 1.85, plus Lint, Package (including release binaries for every target in `.github/workflows/binaries.yml`), and Coveralls coverage.
+Measure performance changes with the benchmarks in `benches/`, comparing against a baseline as described in CONTRIBUTING, and report the numbers. Check coverage with `cargo llvm-cov --locked --show-missing-lines` and add behavioral tests for uncovered paths rather than trivial assertions. CI runs Test on Linux, macOS, and Windows and on Rust 1.85, plus Lint, Package (including release binaries for every target in `.github/workflows/binaries.yml`), and Coveralls coverage.
 
 ## Conventions
 
