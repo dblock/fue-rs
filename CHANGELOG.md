@@ -1,9 +1,8 @@
 # Changelog
 
-## 0.1.1 (Next)
+## 0.1.1 (2026/11/24)
 
 - [#14](https://github.com/dblock/fue-rs/pull/14): Release prebuilt binaries for macOS, Linux, and Windows, and a Homebrew formula with `brew install dblock/tap/fue` - [@dblock](https://github.com/dblock).
-- Your contribution here.
 
 ## 0.1.0 (2026/11/24)
 
